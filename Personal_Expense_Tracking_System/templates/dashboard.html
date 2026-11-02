@@ -37,7 +37,7 @@
   </div>
   <div class="card chart">
     <h2><svg class="icon"><use href="#icon-chart"></use></svg>Monthly spending</h2>
-    <div class="interactive-chart chart-scroll" data-chart="monthly" data-currency="{{ config.get('CURRENCY_SYMBOL', 'Rs.') }}" aria-label="Interactive monthly spending chart"></div>
+    <div class="interactive-chart chart-scroll" data-chart="monthly" data-static-preview="{{ 'true' if config.get('STATIC_PREVIEW') else 'false' }}" data-currency="{{ config.get('CURRENCY_SYMBOL', 'Rs.') }}" aria-label="Interactive monthly spending chart"></div>
     <div class="chart-tooltip" aria-live="polite" aria-atomic="true">Hover or focus a month for details. Select a bar to filter this dashboard.</div>
   </div>
 </div>

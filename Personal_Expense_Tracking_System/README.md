@@ -160,6 +160,21 @@ The name must end in `_test`; the tests create that separate database and empty 
 | Sample data was skipped | Expenses already exist; that is intended. |
 | Changed `.env` but nothing changed | Stop the server (Ctrl+C) and start it again. |
 
+## Vercel static website preview
+
+The repository root contains a Vercel build configuration for a **static-only,
+read-only preview**. Import the GitHub repository into Vercel with the repository
+root (`.`) as the Root Directory and the **Other** framework preset. Vercel runs
+`python build_static_preview.py` and serves the generated `public` directory.
+
+The build uses fictional sample expenses and a temporary SQLite database that
+is discarded after page generation. It does not deploy or connect to your
+personal MySQL database. The preview includes the dashboard, expenses, add
+expense, categories, people and reports pages; form controls, editing, filters,
+and exports are disabled, and data changes are never saved. For a live tracker
+with persistent data, deploy the Flask app separately and configure a hosted
+database and appropriate access controls.
+
 ## Security notes
 
 - All SQL uses parameterized queries; HTML output is escaped; forms use CSRF tokens.

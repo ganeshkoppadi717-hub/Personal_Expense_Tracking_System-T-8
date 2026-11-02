@@ -165,13 +165,16 @@ document.addEventListener("DOMContentLoaded", function () {
     }));
     var gridMax = maxValue > 0 ? maxValue * 1.15 : 1;
     var currency = container.dataset.currency;
+    var staticPreview = container.dataset.staticPreview === "true";
     var svg = svgElement("svg", {
       viewBox: "0 0 " + width + " " + height,
       width: width,
       height: height,
       class: "monthly-chart",
       role: "group",
-      "aria-label": "Monthly spending. Select a bar to filter by month."
+      "aria-label": staticPreview
+        ? "Monthly spending chart"
+        : "Monthly spending. Select a bar to filter by month."
     });
 
     for (var tick = 0; tick <= 4; tick += 1) {
@@ -206,14 +209,15 @@ document.addEventListener("DOMContentLoaded", function () {
         rx: 6,
         class: "monthly-bar",
         fill: chartColors[index % chartColors.length],
-        tabindex: "0",
-        role: "button",
+        tabindex: staticPreview ? "-1" : "0",
+        role: staticPreview ? "img" : "button",
         "aria-label": monthName + ": " + formatMoney(amount, currency) +
-          ", " + Number(item.count || 0) + " expenses. Select to filter this month."
+          ", " + Number(item.count || 0) + " expenses."
       });
       var detail = monthName + " · " + formatMoney(amount, currency) +
         " · " + Number(item.count || 0) + " expenses";
-      attachChartDetail(bar, tooltip, detail + " · Select to filter this month");
+      attachChartDetail(bar, tooltip, detail +
+        (staticPreview ? "" : " · Select to filter this month"));
       var selectMonth = function (month) {
         var match = /^(\d{4})-(0[1-9]|1[0-2])$/.exec(month);
         if (!match) {
@@ -228,15 +232,17 @@ document.addEventListener("DOMContentLoaded", function () {
         params.set("end", month + "-" + String(lastDay).padStart(2, "0"));
         window.location.assign(window.location.pathname + "?" + params.toString());
       };
-      bar.addEventListener("click", function () {
-        selectMonth(item.month);
-      });
-      bar.addEventListener("keydown", function (event) {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
+      if (!staticPreview) {
+        bar.addEventListener("click", function () {
           selectMonth(item.month);
-        }
-      });
+        });
+        bar.addEventListener("keydown", function (event) {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            selectMonth(item.month);
+          }
+        });
+      }
       svg.appendChild(bar);
       svg.appendChild(svgElement("text", {
         x: x + barWidth / 2,
