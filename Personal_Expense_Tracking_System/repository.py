@@ -35,6 +35,9 @@ def _where(filters):
     if filters.get("category_id"):
         clauses.append("e.category_id = %s")
         params.append(int(filters["category_id"]))
+    if filters.get("profile_id"):
+        clauses.append("e.profile_id = %s")
+        params.append(int(filters["profile_id"]))
     sql = (" WHERE " + " AND ".join(clauses)) if clauses else ""
     return sql, params
 
@@ -44,6 +47,25 @@ class Repository:
         self.db = db
 
     # ---- categories ------------------------------------------------------
+    def list_profiles(self):
+        return self.db.query_all(
+            "SELECT p.id, p.name, COUNT(e.id) AS expense_count "
+            "FROM profiles p LEFT JOIN expenses e ON e.profile_id = p.id "
+            "GROUP BY p.id, p.name ORDER BY p.name")
+
+    def get_profile(self, profile_id):
+        return self.db.query_one(
+            "SELECT id, name FROM profiles WHERE id = %s", (profile_id,))
+
+    def profile_name_taken(self, name):
+        return self.db.query_one(
+            "SELECT id FROM profiles WHERE LOWER(name) = LOWER(%s)", (name,)) is not None
+
+    def create_profile(self, name):
+        new_id, _ = self.db.execute(
+            "INSERT INTO profiles (name) VALUES (%s)", (name,))
+        return new_id
+
     def list_categories(self):
         return self.db.query_all(
             "SELECT c.id, c.name, c.description, COUNT(e.id) AS expense_count "
@@ -92,8 +114,9 @@ class Repository:
 
     _SELECT = (
         "SELECT e.id, e.title, e.amount, e.expense_date, e.category_id, "
-        "c.name AS category_name, e.notes "
-        "FROM expenses e INNER JOIN categories c ON c.id = e.category_id")
+        "e.profile_id, p.name AS profile_name, c.name AS category_name, e.notes "
+        "FROM expenses e INNER JOIN categories c ON c.id = e.category_id "
+        "INNER JOIN profiles p ON p.id = e.profile_id")
 
     def list_expenses(self, filters=None):
         where, params = _where(filters)
@@ -107,18 +130,18 @@ class Repository:
 
     def create_expense(self, data):
         new_id, _ = self.db.execute(
-            "INSERT INTO expenses (title, amount, expense_date, category_id, notes) "
-            "VALUES (%s, %s, %s, %s, %s)",
+            "INSERT INTO expenses (title, amount, expense_date, category_id, profile_id, notes) "
+            "VALUES (%s, %s, %s, %s, %s, %s)",
             (data["title"], str(data["amount"]), _iso(data["expense_date"]),
-             data["category_id"], data["notes"]))
+             data["category_id"], data["profile_id"], data["notes"]))
         return new_id
 
     def update_expense(self, expense_id, data):
         _, count = self.db.execute(
             "UPDATE expenses SET title = %s, amount = %s, expense_date = %s, "
-            "category_id = %s, notes = %s WHERE id = %s",
+            "category_id = %s, profile_id = %s, notes = %s WHERE id = %s",
             (data["title"], str(data["amount"]), _iso(data["expense_date"]),
-             data["category_id"], data["notes"], expense_id))
+             data["category_id"], data["profile_id"], data["notes"], expense_id))
         return count
 
     def delete_expense(self, expense_id):

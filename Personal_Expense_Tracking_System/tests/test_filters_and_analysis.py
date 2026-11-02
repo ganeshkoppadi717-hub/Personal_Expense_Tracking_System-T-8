@@ -1,6 +1,7 @@
 import unittest
 from datetime import date
 from decimal import Decimal
+from unittest.mock import patch
 
 from analysis import charts, reports, stats
 from tests.base import AppTestCase
@@ -60,6 +61,33 @@ class FilterTests(AppTestCase):
             self.assertEqual(summary["count"], len(rows))
         page = self.client.get("/")
         self.assertIn(b"Rs.475.25", page.data)
+
+    def test_dashboard_charts_use_the_selected_expenses_and_currency(self):
+        self.app.config["CURRENCY_SYMBOL"] = "\u20b9"
+        query = "?start=2026-08-01&end=2026-08-31&category=%d" % self.travel
+        page = self.client.get("/" + query)
+
+        self.assertEqual(page.status_code, 200)
+        self.assertIn("\u20b9250.00".encode(), page.data)
+        self.assertIn(b'data-chart="category"', page.data)
+        self.assertIn(b'data-chart="monthly"', page.data)
+        self.assertIn(b'"category": "Travel"', page.data)
+        self.assertIn(b'"total": 250.0', page.data)
+
+        with patch("app.charts.category_pie_png", return_value=b"\x89PNG") as pie_chart:
+            response = self.client.get("/chart/category.png" + query)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.mimetype, "image/png")
+        self.assertEqual(pie_chart.call_args.args[0], [{
+            "category": "Travel", "total": 250.0, "count": 1, "percent": 100.0}])
+
+        with patch("app.charts.monthly_bar_png", return_value=b"\x89PNG") as monthly_chart:
+            response = self.client.get("/chart/monthly.png" + query)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.mimetype, "image/png")
+        self.assertEqual(monthly_chart.call_args.args[0], [
+            {"month": "2026-08", "total": 250.0, "count": 1}])
+        self.assertEqual(monthly_chart.call_args.kwargs, {"currency": "\u20b9"})
 
 
 class AnalysisTests(AppTestCase):
@@ -146,6 +174,21 @@ class EmptyDataTests(AppTestCase):
 
 
 class ChartAndExportTests(AppTestCase):
+    def test_monthly_chart_preserves_amount_precision_and_currency(self):
+        def inspect_figure(fig):
+            axis = fig.axes[0]
+            self.assertEqual(axis.get_ylabel(), "Total (\u20b9)")
+            self.assertEqual([text.get_text() for text in axis.texts], ["1,234.50"])
+            self.assertEqual([bar.get_height() for bar in axis.patches], [1234.5])
+            return b"\x89PNG"
+
+        with patch("analysis.charts._to_png", side_effect=inspect_figure):
+            result = charts.monthly_bar_png(
+                [{"month": "2026-08", "total": 1234.5, "count": 2}],
+                currency="\u20b9")
+
+        self.assertEqual(result, b"\x89PNG")
+
     def test_charts_render_png_and_no_figure_leak(self):
         import matplotlib.pyplot as plt  # only to count pyplot-managed figures
         cid = self.make_category("Food")
@@ -166,7 +209,7 @@ class ChartAndExportTests(AppTestCase):
         self.assertEqual(r.status_code, 200)
         self.assertIn("attachment", r.headers["Content-Disposition"])
         text = r.data.decode("utf-8-sig")
-        self.assertTrue(text.startswith("ID,Date,Title,Category,Amount,Notes"))
+        self.assertTrue(text.startswith("ID,Date,Title,Person,Category,Amount,Notes"))
         self.assertIn("'=HYPERLINK", text)
         self.assertIn("10.00", text)
 

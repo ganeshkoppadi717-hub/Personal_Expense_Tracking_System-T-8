@@ -87,16 +87,17 @@ class AppTestCase(unittest.TestCase):
         return self.repo.create_category(name, description)
 
     def make_expense(self, category_id, title="Lunch", amount="100.00",
-                     when="2026-09-10", notes=None):
+                     when="2026-09-10", notes=None, profile_id=1):
         from decimal import Decimal
         return self.repo.create_expense({
             "title": title, "amount": Decimal(str(amount)),
             "expense_date": date.fromisoformat(when),
-            "category_id": category_id, "notes": notes})
+            "category_id": category_id, "profile_id": profile_id, "notes": notes})
 
     def form(self, cid, **overrides):
         data = {"title": "Tea", "amount": "25.50",
                 "expense_date": "2026-09-10", "category_id": str(cid),
+                "profile_id": "1",
                 "notes": "hot"}
         data.update(overrides)
         return data

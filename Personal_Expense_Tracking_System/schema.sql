@@ -15,17 +15,30 @@ CREATE TABLE IF NOT EXISTS categories (
     CONSTRAINT uq_categories_name UNIQUE (name)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS profiles (
+    id         INT AUTO_INCREMENT PRIMARY KEY,
+    name       VARCHAR(50) NOT NULL,
+    created_at TIMESTAMP   NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_profiles_name UNIQUE (name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT IGNORE INTO profiles (name) VALUES ('Household');
+
 CREATE TABLE IF NOT EXISTS expenses (
     id           INT AUTO_INCREMENT PRIMARY KEY,
     title        VARCHAR(100)   NOT NULL,
     amount       DECIMAL(10,2)  NOT NULL,
     expense_date DATE           NOT NULL,
     category_id  INT            NOT NULL,
+    profile_id   INT            NOT NULL DEFAULT 1,
     notes        VARCHAR(500)   NULL,
     created_at   TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT chk_expenses_amount_positive CHECK (amount > 0),
     CONSTRAINT fk_expenses_category FOREIGN KEY (category_id)
         REFERENCES categories (id) ON DELETE RESTRICT,
+    CONSTRAINT fk_expenses_profile FOREIGN KEY (profile_id)
+        REFERENCES profiles (id) ON DELETE RESTRICT,
     INDEX idx_expenses_date (expense_date),
-    INDEX idx_expenses_category (category_id)
+    INDEX idx_expenses_category (category_id),
+    INDEX idx_expenses_profile (profile_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

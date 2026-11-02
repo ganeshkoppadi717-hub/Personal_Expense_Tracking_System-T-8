@@ -17,6 +17,15 @@
     </select>
   </div>
   <div class="field">
+    <label for="person">Person</label>
+    <select id="person" name="person">
+      <option value="">All people</option>
+      {% for p in profiles %}
+        <option value="{{ p.id }}" {{ 'selected' if filters.profile_id == p.id }}>{{ p.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="field">
     <button type="submit" class="btn">Apply filters</button>
     <button type="button" id="reset-filters" class="btn secondary" data-url="{{ filter_action }}">Clear</button>
   </div>

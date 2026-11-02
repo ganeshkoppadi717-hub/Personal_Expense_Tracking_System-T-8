@@ -3,31 +3,48 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f8fc">
   <title>{% block title %}Expense Tracker{% endblock %} - Personal Expense Tracking System</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
-<body>
+<body class="page-{{ request.endpoint|replace('_', '-') }}">
+  <svg aria-hidden="true" class="icon-library" style="position:absolute;width:0;height:0;overflow:hidden">
+    <symbol id="icon-wallet" viewBox="0 0 24 24"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4H20v16H6.5A2.5 2.5 0 0 1 4 17.5z"/><path d="M4 7h13.5A2.5 2.5 0 0 1 20 9.5V12h-5a2.5 2.5 0 0 0 0 5h5"/><path d="M15 14.5h.01"/></symbol>
+    <symbol id="icon-home" viewBox="0 0 24 24"><path d="m3 10 9-7 9 7"/><path d="M5 9v12h14V9M9 21v-7h6v7"/></symbol>
+    <symbol id="icon-receipt" viewBox="0 0 24 24"><path d="M5 3v18l3-2 4 2 4-2 3 2V3l-3 2-4-2-4 2z"/><path d="M9 9h6M9 13h6"/></symbol>
+    <symbol id="icon-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="icon-tag" viewBox="0 0 24 24"><path d="M20 13 13 20 3 10V4h6z"/><path d="M7.5 7.5h.01"/></symbol>
+    <symbol id="icon-chart" viewBox="0 0 24 24"><path d="M4 19V5M4 19h17"/><path d="m7 15 4-4 3 2 6-7"/><path d="M16 6h4v4"/></symbol>
+    <symbol id="icon-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></symbol>
+    <symbol id="icon-coins" viewBox="0 0 24 24"><ellipse cx="9" cy="6" rx="6" ry="3"/><path d="M3 6v5c0 1.7 2.7 3 6 3M15 6v2"/><path d="M3 11v5c0 1.7 2.7 3 6 3"/><ellipse cx="16" cy="15" rx="5" ry="2.5"/><path d="M11 15v4c0 1.4 2.2 2.5 5 2.5s5-1.1 5-2.5v-4"/></symbol>
+    <symbol id="icon-spark" viewBox="0 0 24 24"><path d="m12 3 1.7 5.3L19 10l-5.3 1.7L12 17l-1.7-5.3L5 10l5.3-1.7z"/><path d="m19 16 .8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z"/></symbol>
+    <symbol id="icon-filter" viewBox="0 0 24 24"><path d="M4 6h16M7 12h10M10 18h4"/></symbol>
+    <symbol id="icon-empty" viewBox="0 0 24 24"><path d="M4 8h16l1 12H3z"/><path d="M8 8a4 4 0 0 1 8 0M9 13h6"/></symbol>
+    <symbol id="icon-download" viewBox="0 0 24 24"><path d="M12 3v12m-5-5 5 5 5-5"/><path d="M5 17v4h14v-4"/></symbol>
+    <symbol id="icon-people" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M20 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+  </svg>
   <header class="topbar">
     <div class="container">
-      <a class="brand" href="{{ url_for('dashboard') }}">Personal Expense Tracker</a>
-      <nav>
-        <a href="{{ url_for('dashboard') }}" class="{{ 'active' if request.endpoint == 'dashboard' }}">Dashboard</a>
-        <a href="{{ url_for('expenses') }}" class="{{ 'active' if request.endpoint == 'expenses' }}">Expenses</a>
-        <a href="{{ url_for('add_expense') }}" class="{{ 'active' if request.endpoint == 'add_expense' }}">Add Expense</a>
-        <a href="{{ url_for('categories') }}" class="{{ 'active' if request.endpoint == 'categories' }}">Categories</a>
-        <a href="{{ url_for('reports_page') }}" class="{{ 'active' if request.endpoint == 'reports_page' }}">Reports</a>
+      <a class="brand" href="{{ url_for('dashboard') }}"><span class="brand-mark"><svg class="icon"><use href="#icon-wallet"></use></svg></span> Personal Expense Tracker</a>
+      <nav aria-label="Main navigation">
+        <a href="{{ url_for('dashboard') }}" class="{{ 'active' if request.endpoint == 'dashboard' }}" {% if request.endpoint == 'dashboard' %}aria-current="page"{% endif %}><svg class="icon"><use href="#icon-home"></use></svg>Dashboard</a>
+        <a href="{{ url_for('expenses') }}" class="{{ 'active' if request.endpoint == 'expenses' }}" {% if request.endpoint == 'expenses' %}aria-current="page"{% endif %}><svg class="icon"><use href="#icon-receipt"></use></svg>Expenses</a>
+        <a href="{{ url_for('add_expense') }}" class="{{ 'active' if request.endpoint == 'add_expense' }}" {% if request.endpoint == 'add_expense' %}aria-current="page"{% endif %}><svg class="icon"><use href="#icon-plus"></use></svg>Add expense</a>
+        <a href="{{ url_for('categories') }}" class="{{ 'active' if request.endpoint == 'categories' }}" {% if request.endpoint == 'categories' %}aria-current="page"{% endif %}><svg class="icon"><use href="#icon-tag"></use></svg>Categories</a>
+        <a href="{{ url_for('people') }}" class="{{ 'active' if request.endpoint == 'people' }}" {% if request.endpoint == 'people' %}aria-current="page"{% endif %}><svg class="icon"><use href="#icon-people"></use></svg>People</a>
+        <a href="{{ url_for('reports_page') }}" class="{{ 'active' if request.endpoint == 'reports_page' }}" {% if request.endpoint == 'reports_page' %}aria-current="page"{% endif %}><svg class="icon"><use href="#icon-chart"></use></svg>Reports</a>
       </nav>
     </div>
   </header>
   <main class="container">
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% for category, message in messages %}
-        <div class="flash {{ category }}">{{ message }}</div>
+        <div class="flash {{ category }}" role="status"><span>{{ message }}</span><button type="button" class="flash-close" aria-label="Dismiss notification">&times;</button></div>
       {% endfor %}
     {% endwith %}
     {% block content %}{% endblock %}
   </main>
-  <footer>Personal Expense Tracking System &middot; Mohan Babu University project</footer>
+  <footer>Personal Expense Tracking System <span aria-hidden="true">&middot;</span> Mohan Babu University project</footer>
   <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
 </html>

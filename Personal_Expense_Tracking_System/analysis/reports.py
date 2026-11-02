@@ -17,9 +17,10 @@ def expenses_csv(rows):
     """Return CSV text for repository rows."""
     out = io.StringIO()
     writer = csv.writer(out)
-    writer.writerow(["ID", "Date", "Title", "Category", "Amount", "Notes"])
+    writer.writerow(["ID", "Date", "Title", "Person", "Category", "Amount", "Notes"])
     for r in rows:
         writer.writerow([r["id"], r["expense_date"].isoformat(), _safe_cell(r["title"]),
+                         _safe_cell(r["profile_name"]),
                          _safe_cell(r["category_name"]), "%.2f" % r["amount"],
                          _safe_cell(r["notes"])])
     return out.getvalue()

@@ -1,30 +1,38 @@
 {% extends "base.html" %}
 {% block title %}Expenses{% endblock %}
 {% block content %}
-<h1>Expenses</h1>
+<div class="page-heading">
+  <div class="heading-title">
+    <span class="heading-icon"><svg class="icon"><use href="#icon-receipt"></use></svg></span>
+    <div><h1>Expenses</h1><p>Browse, filter and manage your day-to-day spending.</p></div>
+  </div>
+</div>
 
 <div class="card">
+  <h2><svg class="icon"><use href="#icon-filter"></use></svg> Refine your view</h2>
   {% set filter_action = url_for('expenses') %}
   {% include "_filters.html" %}
 </div>
 
 <div class="card">
-  <p>
-    <strong>{{ rows | length }}</strong> expense(s), total <strong>{{ total | money }}</strong>
-    &nbsp;
-    <a class="btn small" href="{{ url_for('add_expense') }}">+ Add expense</a>
-    <a class="btn small secondary" href="{{ url_for('export_csv', **export_args) }}">Download CSV</a>
-  </p>
+  <div class="list-toolbar">
+    <p class="list-summary"><strong>{{ rows | length }}</strong> expense(s) <span aria-hidden="true">&middot;</span> total <strong>{{ total | money }}</strong></p>
+    <div class="toolbar-actions">
+      <a class="btn small" href="{{ url_for('add_expense') }}"><svg class="icon"><use href="#icon-plus"></use></svg>Add expense</a>
+      <a class="btn small secondary" href="{{ url_for('export_csv', **export_args) }}"><svg class="icon"><use href="#icon-download"></use></svg>Download CSV</a>
+    </div>
+  </div>
   {% if rows %}
   <div class="table-wrap">
   <table>
-    <thead><tr><th>Date</th><th>Title</th><th>Category</th><th class="num">Amount</th><th>Notes</th><th></th></tr></thead>
+    <thead><tr><th>Date</th><th>Title</th><th>Person</th><th>Category</th><th class="num">Amount</th><th>Notes</th><th></th></tr></thead>
     <tbody>
     {% for e in rows %}
       <tr>
         <td>{{ e.expense_date | nice_date }}</td>
         <td>{{ e.title }}</td>
-        <td>{{ e.category_name }}</td>
+        <td><span class="person-pill">{{ e.profile_name }}</span></td>
+        <td><span class="category-pill">{{ e.category_name }}</span></td>
         <td class="num">{{ e.amount | money }}</td>
         <td>{{ e.notes or '' }}</td>
         <td class="actions">
@@ -40,7 +48,7 @@
   </table>
   </div>
   {% else %}
-    <div class="empty">No expenses found. Try clearing the filters or add a new expense.</div>
+    <div class="empty"><svg class="icon"><use href="#icon-empty"></use></svg>No expenses found. Try clearing the filters or add a new expense.</div>
   {% endif %}
 </div>
 {% endblock %}

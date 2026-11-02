@@ -11,7 +11,7 @@ TODAY = date(2026, 10, 22)
 
 def good(**kw):
     data = {"title": "Tea", "amount": "25.50", "expense_date": "2026-10-01",
-            "category_id": "1", "notes": ""}
+            "category_id": "1", "profile_id": "1", "notes": ""}
     data.update(kw)
     return data
 
@@ -39,7 +39,8 @@ class ExpenseValidationTests(unittest.TestCase):
 
     def test_required_fields(self):
         _, errors = validate_expense({}, [1], today=TODAY)
-        self.assertEqual(set(errors), {"title", "amount", "expense_date", "category_id"})
+        self.assertEqual(set(errors), {
+            "title", "amount", "expense_date", "category_id", "profile_id"})
 
     def test_whitespace_title_rejected(self):
         _, errors = validate_expense(good(title="   "), [1], today=TODAY)
@@ -63,6 +64,12 @@ class ExpenseValidationTests(unittest.TestCase):
         for bad in ["", "abc", "99"]:
             _, errors = validate_expense(good(category_id=bad), [1], today=TODAY)
             self.assertIn("category_id", errors, bad)
+
+    def test_profile_checks(self):
+        for bad in ["", "abc", "99"]:
+            _, errors = validate_expense(
+                good(profile_id=bad), [1], valid_profile_ids=[1], today=TODAY)
+            self.assertIn("profile_id", errors, bad)
 
 
 class OtherValidationTests(unittest.TestCase):

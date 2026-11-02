@@ -1,33 +1,48 @@
 {% extends "base.html" %}
 {% block title %}Reports{% endblock %}
 {% block content %}
-<h1>Monthly report</h1>
+<div class="page-heading">
+  <div class="heading-title">
+    <span class="heading-icon"><svg class="icon"><use href="#icon-chart"></use></svg></span>
+    <div><h1>Monthly report</h1><p>Explore your monthly totals and see where your money goes.</p></div>
+  </div>
+</div>
 
 <div class="card">
+  <h2><svg class="icon"><use href="#icon-calendar"></use></svg>Choose a month</h2>
   <form method="get" action="{{ url_for('reports_page') }}" class="filters">
     <div class="field">
       <label for="month">Month</label>
       <input type="month" id="month" name="month" value="{{ month_value }}">
     </div>
+    <div class="field">
+      <label for="person">Person</label>
+      <select id="person" name="person">
+        <option value="">All people</option>
+        {% for p in profiles %}
+          <option value="{{ p.id }}" {{ 'selected' if selected_profile_id == p.id }}>{{ p.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
     <div class="field"><button type="submit" class="btn">Show report</button></div>
-    <div class="field"><a class="btn secondary" href="{{ url_for('export_csv', start=start, end=end) }}">Download this month as CSV</a></div>
+    <div class="field"><a class="btn secondary" href="{{ url_for('export_csv', **export_args) }}"><svg class="icon"><use href="#icon-download"></use></svg>Download this month as CSV</a></div>
   </form>
 </div>
 
-<h2>{{ month_name }} {{ report.year }}</h2>
+<h2 class="report-month"><svg class="icon"><use href="#icon-calendar"></use></svg>{{ month_name }} {{ report.year }}</h2>
 {% if report.summary.count == 0 %}
-  <div class="card empty">No expenses recorded for this month.</div>
+  <div class="card empty"><svg class="icon"><use href="#icon-empty"></use></svg>No expenses recorded for this month.</div>
 {% else %}
 <div class="grid stats">
-  <div class="card stat"><div class="label">Total</div><div class="value">{{ report.summary.total | money }}</div></div>
-  <div class="card stat"><div class="label">Expenses</div><div class="value">{{ report.summary.count }}</div></div>
-  <div class="card stat"><div class="label">Average</div><div class="value">{{ report.summary.average | money }}</div></div>
-  <div class="card stat"><div class="label">Median</div><div class="value">{{ report.summary.median | money }}</div></div>
-  <div class="card stat"><div class="label">Std. deviation</div><div class="value">{{ report.summary.std_dev | money }}</div></div>
+  <div class="card stat"><div class="stat-top"><div class="label">Total</div><span class="stat-icon"><svg class="icon"><use href="#icon-coins"></use></svg></span></div><div class="value">{{ report.summary.total | money }}</div></div>
+  <div class="card stat"><div class="stat-top"><div class="label">Expenses</div><span class="stat-icon"><svg class="icon"><use href="#icon-receipt"></use></svg></span></div><div class="value">{{ report.summary.count }}</div></div>
+  <div class="card stat"><div class="stat-top"><div class="label">Average</div><span class="stat-icon"><svg class="icon"><use href="#icon-chart"></use></svg></span></div><div class="value">{{ report.summary.average | money }}</div></div>
+  <div class="card stat"><div class="stat-top"><div class="label">Median</div><span class="stat-icon"><svg class="icon"><use href="#icon-spark"></use></svg></span></div><div class="value">{{ report.summary.median | money }}</div></div>
+  <div class="card stat"><div class="stat-top"><div class="label">Std. deviation</div><span class="stat-icon"><svg class="icon"><use href="#icon-chart"></use></svg></span></div><div class="value">{{ report.summary.std_dev | money }}</div></div>
 </div>
 <div class="grid two">
   <div class="card">
-    <h2>By category</h2>
+    <h2><svg class="icon"><use href="#icon-tag"></use></svg>By category</h2>
     <div class="table-wrap"><table>
       <thead><tr><th>Category</th><th class="num">Total</th><th class="num">Share</th></tr></thead>
       <tbody>
@@ -38,12 +53,12 @@
     </table></div>
   </div>
   <div class="card">
-    <h2>Top 5 expenses</h2>
+    <h2><svg class="icon"><use href="#icon-spark"></use></svg>Top 5 expenses</h2>
     <div class="table-wrap"><table>
       <thead><tr><th>Date</th><th>Title</th><th class="num">Amount</th></tr></thead>
       <tbody>
       {% for t in report.top %}
-        <tr><td>{{ t.date | nice_date }}</td><td>{{ t.title }}<div class="muted">{{ t.category }}</div></td><td class="num">{{ t.amount | money }}</td></tr>
+        <tr><td>{{ t.date | nice_date }}</td><td>{{ t.title }}<div class="muted"><span class="category-pill">{{ t.category }}</span></div></td><td class="num">{{ t.amount | money }}</td></tr>
       {% endfor %}
       </tbody>
     </table></div>

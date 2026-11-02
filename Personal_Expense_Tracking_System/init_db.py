@@ -49,8 +49,41 @@ def create_schema(cfg):
     conn = connect_server(cfg)
     try:
         run_statements(conn, split_statements(read_sql("schema.sql", cfg["DB_NAME"])))
+        migrate_profiles(conn)
     finally:
         conn.close()
+
+
+def migrate_profiles(conn):
+    """Assign existing expenses to the default profile and add its FK/index."""
+    with conn.cursor() as cur:
+        cur.execute("SELECT id FROM profiles ORDER BY id LIMIT 1")
+        row = cur.fetchone()
+        if row is None:
+            cur.execute("INSERT INTO profiles (name) VALUES (%s)", ("Household",))
+            profile_id = cur.lastrowid
+        else:
+            profile_id = row[0] if not isinstance(row, dict) else row["id"]
+
+        cur.execute("SHOW COLUMNS FROM expenses LIKE 'profile_id'")
+        if cur.fetchone() is None:
+            cur.execute("ALTER TABLE expenses ADD COLUMN profile_id INT NULL AFTER category_id")
+        cur.execute("UPDATE expenses SET profile_id = %s WHERE profile_id IS NULL",
+                    (profile_id,))
+        cur.execute("ALTER TABLE expenses MODIFY profile_id INT NOT NULL DEFAULT %s" % int(profile_id))
+
+        cur.execute(
+            "SELECT CONSTRAINT_NAME FROM information_schema.KEY_COLUMN_USAGE "
+            "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'expenses' "
+            "AND CONSTRAINT_NAME = 'fk_expenses_profile'")
+        if cur.fetchone() is None:
+            cur.execute(
+                "ALTER TABLE expenses ADD CONSTRAINT fk_expenses_profile "
+                "FOREIGN KEY (profile_id) REFERENCES profiles (id) ON DELETE RESTRICT")
+
+        cur.execute("SHOW INDEX FROM expenses WHERE Key_name = 'idx_expenses_profile'")
+        if cur.fetchone() is None:
+            cur.execute("CREATE INDEX idx_expenses_profile ON expenses (profile_id)")
 
 
 def load_sample(cfg, force=False):

@@ -38,6 +38,7 @@ def main():
         try:
             counts = Database(cfg).check()
             line(True, "Connected to MySQL")
+            line(True, "Table 'profiles' exists: %d row(s)" % counts["profiles"])
             line(True, "Table 'categories' exists: %d row(s)" % counts["categories"])
             line(True, "Table 'expenses' exists: %d row(s)" % counts["expenses"])
             if counts["expenses"] == 0:

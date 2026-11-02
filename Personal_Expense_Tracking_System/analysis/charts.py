@@ -62,7 +62,7 @@ def monthly_bar_png(monthly, currency="Rs."):
     ax.set_title("Monthly spending")
     ax.set_xlabel("Month")
     ax.set_ylabel("Total (%s)" % currency)
-    ax.bar_label(bars, labels=["{:,.0f}".format(t) for t in totals], padding=2, fontsize=8)
+    ax.bar_label(bars, labels=["{:,.2f}".format(t) for t in totals], padding=2, fontsize=8)
     ax.tick_params(axis="x", labelrotation=45)
     ax.margins(y=0.12)
     return _to_png(fig)

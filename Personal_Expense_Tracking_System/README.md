@@ -6,14 +6,16 @@ Built with **Python, Flask, MySQL, HTML, CSS, JavaScript, Pandas, NumPy and Matp
 ## Features
 
 - Add, view, edit and delete expenses (amount must be greater than zero)
+- Add shared people profiles and assign each expense to a person; filter dashboards, expenses,
+  reports, charts and CSV exports by person
 - Manage categories (add, rename, delete; a category that still has expenses cannot be deleted)
 - Filter by date range, by category, or both together
 - Dashboard: total, count, average, highest, this-month total, category totals with percentages,
-  pie chart and monthly bar chart
+  interactive category and monthly charts
 - Monthly report (total, average, median, standard deviation, category breakdown, top 5 expenses)
 - CSV download of the filtered expenses
 - Friendly error messages for bad input and for database/configuration problems
-- Automated tests (78 tests) and a database diagnostic command
+- Automated tests and a database diagnostic command
 
 ## Project structure
 
@@ -22,11 +24,11 @@ Personal_Expense_Tracking_System/
   app.py             Flask application (routes)
   config.py          Settings read from .env
   db.py              Database connection helper (parameterized SQL only)
-  repository.py      All SQL queries for categories and expenses
+  repository.py      All SQL queries for profiles, categories and expenses
   validators.py      Input validation
   init_db.py         Creates the database/tables and loads sample data
   diagnose.py        Checks Python packages, .env and the MySQL connection
-  schema.sql         MySQL tables
+  schema.sql         MySQL tables (safe to rerun to upgrade)
   sample_data.sql    Fictional sample categories and expenses
   .env.example       Template for your own MySQL settings
   requirements.txt   Python packages
@@ -97,10 +99,14 @@ The `.env` file stays on your computer only. Never share it.
 python init_db.py --sample
 ```
 This creates the database `expense_tracker`, the tables, and ~34 fictional expenses.
-It never deletes anything and skips the sample data if expenses already exist.
+It also upgrades existing expense tables by assigning older expenses to the default
+`Household` profile. The upgrade never deletes existing data, and sample loading is
+skipped if expenses already exist.
 Use `python init_db.py` (without `--sample`) if you want an empty database.
 
-*Alternative (MySQL Workbench):* open `schema.sql`, run it, then open `sample_data.sql` and run it **once**.
+*Alternative (MySQL Workbench):* for a new database, open `schema.sql` and run it, then open
+`sample_data.sql` and run it **once**. Use `python init_db.py` to safely upgrade an existing
+database so its current expenses are assigned to a profile.
 
 ### 9. Verify the database
 ```powershell

@@ -155,7 +155,7 @@ class Database:
     def check(self):
         """Verify the connection and tables. Returns {table: row_count}."""
         counts = {}
-        for table in ("categories", "expenses"):
+        for table in ("profiles", "categories", "expenses"):
             row = self.query_one("SELECT COUNT(*) AS n FROM %s" % table)
             counts[table] = int(row["n"])
         return counts

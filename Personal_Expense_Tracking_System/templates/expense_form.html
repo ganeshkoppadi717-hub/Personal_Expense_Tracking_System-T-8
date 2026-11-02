@@ -1,15 +1,22 @@
 {% extends "base.html" %}
 {% block title %}{{ 'Add expense' if mode == 'add' else 'Edit expense' }}{% endblock %}
 {% block content %}
-<h1>{{ 'Add expense' if mode == 'add' else 'Edit expense' }}</h1>
+<div class="page-heading">
+  <div class="heading-title">
+    <span class="heading-icon"><svg class="icon"><use href="#icon-plus"></use></svg></span>
+    <div><h1>{{ 'Add expense' if mode == 'add' else 'Edit expense' }}</h1><p>Keep your records accurate with a few quick details.</p></div>
+  </div>
+</div>
 
 {% if not categories %}
   <div class="card empty">
+    <svg class="icon"><use href="#icon-tag"></use></svg>
     You need at least one category first.
     <a href="{{ url_for('categories') }}">Create a category</a>.
   </div>
 {% else %}
-<div class="card" style="max-width:560px">
+<div class="card form-card">
+  <p class="card-intro">Fields marked as required should be filled in before saving.</p>
   <form method="post" action="{{ action }}" novalidate>
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="field">
@@ -28,6 +35,16 @@
       {% if errors.expense_date %}<div class="error-text">{{ errors.expense_date }}</div>{% endif %}
     </div>
     <div class="field">
+      <label for="profile_id">Person</label>
+      <select id="profile_id" name="profile_id" required class="{{ 'invalid' if errors.profile_id }}">
+        <option value="">-- choose a person --</option>
+        {% for p in profiles %}
+          <option value="{{ p.id }}" {{ 'selected' if (form.profile_id | string) == (p.id | string) }}>{{ p.name }}</option>
+        {% endfor %}
+      </select>
+      {% if errors.profile_id %}<div class="error-text">{{ errors.profile_id }}</div>{% endif %}
+    </div>
+    <div class="field">
       <label for="category_id">Category</label>
       <select id="category_id" name="category_id" required class="{{ 'invalid' if errors.category_id }}">
         <option value="">-- choose --</option>
@@ -39,11 +56,14 @@
     </div>
     <div class="field">
       <label for="notes">Notes (optional)</label>
-      <textarea id="notes" name="notes" rows="3" maxlength="500" class="{{ 'invalid' if errors.notes }}">{{ form.notes or '' }}</textarea>
+      <textarea id="notes" name="notes" rows="3" maxlength="500" data-character-count="notes-count" class="{{ 'invalid' if errors.notes }}">{{ form.notes or '' }}</textarea>
+      <div class="character-count" id="notes-count" aria-live="polite">{{ form.notes|length if form.notes else 0 }} / 500</div>
       {% if errors.notes %}<div class="error-text">{{ errors.notes }}</div>{% endif %}
     </div>
-    <button type="submit" class="btn">{{ 'Save expense' if mode == 'add' else 'Update expense' }}</button>
-    <a class="btn secondary" href="{{ url_for('expenses') }}">Cancel</a>
+    <div class="form-footer">
+      <button type="submit" class="btn">{{ 'Save expense' if mode == 'add' else 'Update expense' }}</button>
+      <a class="btn secondary" href="{{ url_for('expenses') }}">Cancel</a>
+    </div>
   </form>
 </div>
 {% endif %}

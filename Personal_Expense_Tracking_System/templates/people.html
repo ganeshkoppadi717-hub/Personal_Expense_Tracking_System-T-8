@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}People{% endblock %}
+{% block content %}
+<div class="page-heading">
+  <div class="heading-title">
+    <span class="heading-icon"><svg class="icon"><use href="#icon-people"></use></svg></span>
+    <div><h1>People</h1><p>Add people who share this tracker. Their expenses stay grouped by profile.</p></div>
+  </div>
+</div>
+
+<div class="card form-card">
+  <h2><svg class="icon"><use href="#icon-plus"></use></svg>Add a person</h2>
+  <p class="card-intro">Choose a name to make it available when recording expenses.</p>
+  <form method="post" action="{{ url_for('people') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="field">
+      <label for="name">Name</label>
+      <input type="text" id="name" name="name" maxlength="50" required value="{{ form.name or '' }}" class="{{ 'invalid' if errors.name }}">
+      {% if errors.name %}<div class="error-text">{{ errors.name }}</div>{% endif %}
+    </div>
+    <button type="submit" class="btn"><svg class="icon"><use href="#icon-plus"></use></svg>Add person</button>
+  </form>
+</div>
+
+<div class="card">
+  <h2><svg class="icon"><use href="#icon-people"></use></svg>People using this tracker</h2>
+  {% if profiles %}
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Person</th><th class="num">Expenses</th><th></th></tr></thead>
+      <tbody>
+      {% for p in profiles %}
+        <tr>
+          <td><span class="person-pill">{{ p.name }}</span></td>
+          <td class="num">{{ p.expense_count }}</td>
+          <td class="actions"><a class="btn small secondary" href="{{ url_for('add_expense', person=p.id) }}">Add expense</a></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    <div class="empty"><svg class="icon"><use href="#icon-empty"></use></svg>No people yet. Add the first profile above.</div>
+  {% endif %}
+</div>
+{% endblock %}

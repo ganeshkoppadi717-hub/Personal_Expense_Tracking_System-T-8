@@ -38,7 +38,7 @@ def parse_amount(text):
     return rounded, None
 
 
-def validate_expense(form, valid_category_ids, today=None):
+def validate_expense(form, valid_category_ids, valid_profile_ids=None, today=None):
     today = today or date.today()
     errors = {}
     clean = {}
@@ -81,6 +81,21 @@ def validate_expense(form, valid_category_ids, today=None):
                 errors["category_id"] = "That category does not exist."
     clean["category_id"] = category_id
 
+    valid_profile_ids = set(valid_profile_ids if valid_profile_ids is not None else [1])
+    raw_profile = (form.get("profile_id") or "").strip()
+    profile_id = None
+    if not raw_profile:
+        errors["profile_id"] = "Please choose a person."
+    else:
+        try:
+            profile_id = int(raw_profile)
+        except ValueError:
+            errors["profile_id"] = "Please choose a valid person."
+        else:
+            if profile_id not in valid_profile_ids:
+                errors["profile_id"] = "That person does not exist."
+    clean["profile_id"] = profile_id
+
     notes = (form.get("notes") or "").strip()
     if len(notes) > 500:
         errors["notes"] = "Notes must be 500 characters or fewer."
@@ -101,17 +116,27 @@ def validate_category(form):
     return {"name": name, "description": description or None}, errors
 
 
-def validate_filters(args, valid_category_ids):
-    """Read ?start=&end=&category= from the query string.
+def validate_profile(form):
+    name = " ".join((form.get("name") or "").split())
+    if not name:
+        return {"name": name}, {"name": "Person name is required."}
+    if len(name) > 50:
+        return {"name": name}, {"name": "Person name must be 50 characters or fewer."}
+    return {"name": name}, {}
+
+
+def validate_filters(args, valid_category_ids, valid_profile_ids=None):
+    """Read ?start=&end=&category=&person= from the query string.
 
     Returns (filters, error_messages). ``filters`` only contains valid values.
     """
-    filters = {"start": None, "end": None, "category_id": None}
+    filters = {"start": None, "end": None, "category_id": None, "profile_id": None}
     messages = []
 
     start_raw = (args.get("start") or "").strip()
     end_raw = (args.get("end") or "").strip()
     cat_raw = (args.get("category") or "").strip()
+    profile_raw = (args.get("person") or "").strip()
 
     if start_raw:
         start = parse_date(start_raw)
@@ -138,6 +163,16 @@ def validate_filters(args, valid_category_ids):
                 filters["category_id"] = cat_id
             else:
                 messages.append("That category does not exist; the filter was ignored.")
+    if profile_raw:
+        try:
+            profile_id = int(profile_raw)
+        except ValueError:
+            messages.append("Person filter was not valid and was ignored.")
+        else:
+            if profile_id in set(valid_profile_ids or []):
+                filters["profile_id"] = profile_id
+            else:
+                messages.append("That person does not exist; the filter was ignored.")
     return filters, messages
 
 

@@ -131,18 +131,18 @@ class SchemaConsistencyTests(unittest.TestCase):
     def test_mysql_and_sqlite_schemas_have_same_tables_and_columns(self):
         mysql = self.tables((PROJECT_DIR / "schema.sql").read_text(encoding="utf-8"))
         lite = self.tables((PROJECT_DIR / "tests" / "sqlite_schema.sql").read_text(encoding="utf-8"))
-        self.assertEqual(set(mysql), {"categories", "expenses"})
+        self.assertEqual(set(mysql), {"categories", "profiles", "expenses"})
         self.assertEqual(mysql, lite)
 
     def test_sql_files_reference_only_known_tables(self):
         text = (PROJECT_DIR / "repository.py").read_text(encoding="utf-8")
         used = set(re.findall(r"(?:FROM|JOIN|INTO|UPDATE)\s+(\w+)", text))
-        self.assertTrue(used <= {"categories", "expenses"}, used)
+        self.assertTrue(used <= {"categories", "profiles", "expenses"}, used)
 
     def test_init_db_splits_schema_and_sample(self):
         import init_db
         schema = init_db.split_statements(init_db.read_sql("schema.sql", "expense_tracker"))
-        self.assertEqual(len(schema), 4)  # CREATE DATABASE, USE, 2 tables
+        self.assertEqual(len(schema), 6)  # database, USE, 3 tables and default profile
         sample = init_db.split_statements(init_db.read_sql("sample_data.sql", "expense_tracker"))
         self.assertEqual(len(sample), 3)  # USE, categories, expenses
         renamed = init_db.read_sql("schema.sql", "my_db")

@@ -54,7 +54,8 @@ class RuntimeErrorTests(AppTestCase):
 
     def test_health_ok(self):
         r = self.client.get("/health")
-        self.assertEqual(r.get_json(), {"status": "ok", "categories": 0, "expenses": 0})
+        self.assertEqual(r.get_json(), {
+            "status": "ok", "profiles": 1, "categories": 0, "expenses": 0})
 
     def test_csrf_enforced_when_enabled(self):
         app = create_app(dict(self._settings, TESTING=True, CSRF_ENABLED=True, SECRET_KEY="k"))

@@ -15,7 +15,7 @@ from config import Config, config_problems_for_startup
 from db import Database, DatabaseError, DatabaseUnavailable, IntegrityViolation
 from repository import CategoryInUse, Repository
 from validators import (validate_category, validate_expense, validate_filters,
-                        validate_month)
+                        validate_month, validate_profile)
 
 
 def create_app(test_config=None):
@@ -63,9 +63,12 @@ def create_app(test_config=None):
     def category_ids():
         return [c["id"] for c in repo.list_categories()]
 
+    def profile_ids():
+        return [p["id"] for p in repo.list_profiles()]
+
     def read_filters():
         """Valid filters from the query string; invalid ones are flashed and dropped."""
-        filters, messages = validate_filters(request.args, category_ids())
+        filters, messages = validate_filters(request.args, category_ids(), profile_ids())
         for message in messages:
             flash(message, "warning")
         return filters
@@ -78,6 +81,8 @@ def create_app(test_config=None):
             args["end"] = filters["end"]
         if filters["category_id"]:
             args["category"] = filters["category_id"]
+        if filters["profile_id"]:
+            args["person"] = filters["profile_id"]
         return args
 
     # ------------------------------------------------------------------- pages
@@ -91,6 +96,7 @@ def create_app(test_config=None):
             filters=filters,
             chart_args=filter_query(filters),
             categories=repo.list_categories(),
+            profiles=repo.list_profiles(),
             summary=stats.summary_stats(df),
             breakdown=stats.category_breakdown(df),
             monthly=stats.monthly_totals(df),
@@ -105,6 +111,7 @@ def create_app(test_config=None):
         total = sum((r["amount"] for r in rows), start=0)
         return render_template("expenses.html", filters=filters, rows=rows, total=total,
                                categories=repo.list_categories(),
+                               profiles=repo.list_profiles(),
                                export_args=filter_query(filters))
 
     def _expense_form(mode, expense=None, form=None, errors=None, status=200):
@@ -115,20 +122,28 @@ def create_app(test_config=None):
                 form = {"title": expense["title"], "amount": str(expense["amount"]),
                         "expense_date": expense["expense_date"].isoformat(),
                         "category_id": str(expense["category_id"]),
+                        "profile_id": str(expense["profile_id"]),
                         "notes": expense["notes"] or ""}
             else:
-                form = {"expense_date": date.today().isoformat()}
+                profiles = repo.list_profiles()
+                selected_profile = request.args.get("person", type=int)
+                profile_ids_available = {p["id"] for p in profiles}
+                if selected_profile not in profile_ids_available:
+                    selected_profile = profiles[0]["id"] if profiles else ""
+                form = {"expense_date": date.today().isoformat(),
+                        "profile_id": str(selected_profile)}
         action = (url_for("add_expense") if mode == "add"
                   else url_for("edit_expense", expense_id=expense["id"]))
         return render_template("expense_form.html", mode=mode, form=form,
-                               errors=errors or {}, categories=cats, action=action,
+                               errors=errors or {}, categories=cats,
+                               profiles=repo.list_profiles(), action=action,
                                today=date.today().isoformat()), status
 
     @app.route("/expenses/add", methods=["GET", "POST"])
     def add_expense():
         if request.method == "GET":
             return _expense_form("add")
-        clean, errors = validate_expense(request.form, category_ids())
+        clean, errors = validate_expense(request.form, category_ids(), profile_ids())
         if errors:
             return _expense_form("add", form=request.form, errors=errors, status=400)
         repo.create_expense(clean)
@@ -142,7 +157,7 @@ def create_app(test_config=None):
             abort(404)
         if request.method == "GET":
             return _expense_form("edit", expense=expense)
-        clean, errors = validate_expense(request.form, category_ids())
+        clean, errors = validate_expense(request.form, category_ids(), profile_ids())
         if errors:
             return _expense_form("edit", expense=expense, form=request.form,
                                  errors=errors, status=400)
@@ -158,6 +173,26 @@ def create_app(test_config=None):
         return redirect(url_for("expenses"))
 
     # --------------------------------------------------------------- categories
+    @app.route("/people", methods=["GET", "POST"])
+    def people():
+        form, errors, status = {}, {}, 200
+        if request.method == "POST":
+            clean, errors = validate_profile(request.form)
+            if not errors and repo.profile_name_taken(clean["name"]):
+                errors["name"] = "A person with this name already exists."
+            if errors:
+                form, status = request.form, 400
+            else:
+                try:
+                    repo.create_profile(clean["name"])
+                except IntegrityViolation:
+                    flash("A person with this name already exists.", "error")
+                    return redirect(url_for("people"))
+                flash("Person added.", "success")
+                return redirect(url_for("people"))
+        return render_template("people.html", profiles=repo.list_profiles(),
+                               form=form, errors=errors), status
+
     @app.route("/categories", methods=["GET", "POST"])
     def categories():
         form, errors, status = {}, {}, 200
@@ -218,12 +253,22 @@ def create_app(test_config=None):
         last_day = calendar.monthrange(year, month)[1]
         start = date(year, month, 1).isoformat()
         end = date(year, month, last_day).isoformat()
-        rows = repo.list_expenses({"start": start, "end": end})
+        _, messages = validate_filters(
+            {"person": request.args.get("person", "")}, [], profile_ids())
+        for message in messages:
+            flash(message, "warning")
+        person_id = request.args.get("person", type=int)
+        if person_id not in set(profile_ids()):
+            person_id = None
+        rows = repo.list_expenses({"start": start, "end": end, "profile_id": person_id})
         report = reports.monthly_report(stats.expenses_to_df(rows), year, month)
         return render_template("reports.html", report=report,
                                month_value="%04d-%02d" % (year, month),
                                month_name=calendar.month_name[month],
-                               start=start, end=end)
+                               start=start, end=end, profiles=repo.list_profiles(),
+                               selected_profile_id=person_id,
+                               export_args={"start": start, "end": end,
+                                            "person": person_id})
 
     @app.route("/export.csv")
     def export_csv():
@@ -246,7 +291,8 @@ def create_app(test_config=None):
     @app.route("/chart/monthly.png")
     def chart_monthly():
         df = stats.expenses_to_df(repo.list_expenses(read_filters()))
-        return _png(charts.monthly_bar_png(stats.monthly_totals(df)))
+        return _png(charts.monthly_bar_png(
+            stats.monthly_totals(df), currency=app.config.get("CURRENCY_SYMBOL", "Rs.")))
 
     @app.route("/health")
     def health():
