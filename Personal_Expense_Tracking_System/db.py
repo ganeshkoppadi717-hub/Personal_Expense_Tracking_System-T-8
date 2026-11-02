@@ -30,6 +30,11 @@ class IntegrityViolation(DatabaseError):
 def config_problems(cfg):
     """Return a list of human-readable configuration problems (may be empty)."""
     problems = []
+    if cfg.get("DB_BACKEND") == "postgres":
+        if not cfg.get("DATABASE_URL"):
+            problems.append(
+                "DATABASE_URL is missing. Connect a PostgreSQL database to the deployment.")
+        return problems
     if not cfg.get("DB_USER"):
         problems.append("DB_USER is missing. Add it to your .env file.")
     password = cfg.get("DB_PASSWORD")
@@ -77,6 +82,28 @@ class Database:
             conn.execute("PRAGMA foreign_keys = ON")
             return conn
 
+        if self.backend == "postgres":
+            problems = config_problems(self.cfg)
+            if problems:
+                raise DatabaseUnavailable(" ".join(problems))
+            try:
+                import psycopg
+                from psycopg.rows import dict_row
+            except ImportError:
+                raise DatabaseUnavailable(
+                    "The psycopg package is not installed. Install the project requirements.")
+            self._mod = psycopg
+            try:
+                return psycopg.connect(
+                    self.cfg["DATABASE_URL"],
+                    connect_timeout=5,
+                    row_factory=dict_row,
+                )
+            except psycopg.Error as exc:
+                raise DatabaseUnavailable(
+                    "Cannot reach PostgreSQL. Check DATABASE_URL and the database "
+                    "network settings.") from exc
+
         problems = config_problems(self.cfg)
         if problems:
             raise DatabaseUnavailable(" ".join(problems))
@@ -119,6 +146,13 @@ class Database:
     def _run(self, sql, params, mode):
         sql = self._prepare(sql)
         params = tuple(params or ())
+        postgres_insert = (
+            self.backend == "postgres"
+            and mode == "write"
+            and sql.lstrip().upper().startswith("INSERT")
+        )
+        if postgres_insert and "RETURNING" not in sql.upper():
+            sql += " RETURNING id"
         with self.connection() as conn:
             cur = conn.cursor()
             try:
@@ -128,8 +162,9 @@ class Database:
                 if mode == "one":
                     row = cur.fetchone()
                     return dict(row) if row else None
+                lastrowid = cur.fetchone()["id"] if postgres_insert else cur.lastrowid
                 conn.commit()
-                return cur.lastrowid, cur.rowcount
+                return lastrowid, cur.rowcount
             except self._mod.IntegrityError as exc:
                 conn.rollback()
                 raise IntegrityViolation(

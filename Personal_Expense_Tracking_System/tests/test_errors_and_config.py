@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import MagicMock, patch
 
 from app import create_app
 from db import Database, DatabaseUnavailable, config_problems
@@ -27,6 +28,48 @@ class ConfigErrorTests(unittest.TestCase):
         problems = config_problems({"DB_USER": "u", "DB_PASSWORD": "p", "DB_NAME": "bad name;"})
         self.assertEqual(len(problems), 1)
 
+    def test_postgres_requires_database_url(self):
+        problems = config_problems({"DB_BACKEND": "postgres"})
+        self.assertEqual(len(problems), 1)
+        self.assertIn("DATABASE_URL", problems[0])
+
+    def test_missing_postgres_url_gives_clear_page(self):
+        r = create_app({
+            "DB_BACKEND": "postgres",
+            "TESTING": True,
+            "CSRF_ENABLED": False,
+            "SECRET_KEY": "test-secret",
+        }).test_client().get("/")
+        self.assertEqual(r.status_code, 503)
+        self.assertIn(b"DATABASE_URL is missing", r.data)
+
+    def test_unreachable_postgres_does_not_expose_connection_url(self):
+        connection_url = "postgresql://user:supersecret@127.0.0.1:1/test"
+        r = create_app({
+            "DB_BACKEND": "postgres",
+            "DATABASE_URL": connection_url,
+            "TESTING": True,
+            "CSRF_ENABLED": False,
+            "SECRET_KEY": "test-secret",
+        }).test_client().get("/")
+        self.assertEqual(r.status_code, 503)
+        self.assertIn(b"Cannot reach PostgreSQL", r.data)
+        self.assertNotIn(b"supersecret", r.data)
+
+    def test_postgres_insert_returns_generated_id(self):
+        import psycopg
+
+        db = Database({"DB_BACKEND": "postgres", "DATABASE_URL": "unused"})
+        db._mod = psycopg
+        connection = MagicMock()
+        cursor = connection.cursor.return_value
+        cursor.fetchone.return_value = {"id": 42}
+        with patch.object(db, "_connect", return_value=connection):
+            result = db.execute("INSERT INTO profiles (name) VALUES (%s)", ("Alex",))
+
+        self.assertEqual(result, (42, cursor.rowcount))
+        self.assertIn("RETURNING id", cursor.execute.call_args.args[0])
+
     def test_health_reports_error_json(self):
         r = self.mysql_app().get("/health")
         self.assertEqual(r.status_code, 503)
@@ -44,6 +87,8 @@ class ConfigErrorTests(unittest.TestCase):
     def test_database_helper_raises_unavailable(self):
         with self.assertRaises(DatabaseUnavailable):
             Database({"DB_BACKEND": "mysql"}).query_all("SELECT 1")
+        with self.assertRaises(DatabaseUnavailable):
+            Database({"DB_BACKEND": "postgres"}).query_all("SELECT 1")
 
 
 class RuntimeErrorTests(AppTestCase):
@@ -56,6 +101,11 @@ class RuntimeErrorTests(AppTestCase):
         r = self.client.get("/health")
         self.assertEqual(r.get_json(), {
             "status": "ok", "profiles": 1, "categories": 0, "expenses": 0})
+
+    def test_public_demo_banner_warns_about_shared_data(self):
+        app = create_app(dict(self._settings, TESTING=True, PUBLIC_DEMO=True))
+        response = app.test_client().get("/")
+        self.assertIn(b"Anyone can view, add, edit or delete shared demo data", response.data)
 
     def test_csrf_enforced_when_enabled(self):
         app = create_app(dict(self._settings, TESTING=True, CSRF_ENABLED=True, SECRET_KEY="k"))

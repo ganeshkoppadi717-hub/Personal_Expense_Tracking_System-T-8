@@ -5,12 +5,20 @@
   <h1 class="error-heading"><span class="heading-icon"><svg class="icon"><use href="#icon-spark"></use></svg></span>The database is not ready</h1>
   <div class="flash error">{{ message }}</div>
   <p>Things to check:</p>
+  {% if config.get('DB_BACKEND') == 'postgres' %}
+  <ol>
+    <li>Connect the Neon PostgreSQL database to this Vercel project so it supplies <code>DATABASE_URL</code>.</li>
+    <li>Set <code>DB_BACKEND=postgres</code> in the Vercel environment variables.</li>
+    <li>Initialize the database with <code>schema_postgres.sql</code>.</li>
+  </ol>
+  {% else %}
   <ol>
     <li>MySQL is installed and running.</li>
     <li>You copied <code>.env.example</code> to <code>.env</code> and typed your own MySQL user name and password.</li>
     <li>You created the tables with <code>python init_db.py --sample</code>.</li>
     <li>Run <code>python diagnose.py</code> in the project folder for a step-by-step check.</li>
   </ol>
+  {% endif %}
   <a class="btn" href="{{ url_for('dashboard') }}">Try again</a>
 </div>
 {% endblock %}

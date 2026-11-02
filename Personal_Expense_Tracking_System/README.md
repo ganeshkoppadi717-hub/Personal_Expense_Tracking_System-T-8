@@ -160,20 +160,46 @@ The name must end in `_test`; the tests create that separate database and empty 
 | Sample data was skipped | Expenses already exist; that is intended. |
 | Changed `.env` but nothing changed | Stop the server (Ctrl+C) and start it again. |
 
-## Vercel static website preview
+## Vercel deployment with PostgreSQL
 
-The repository root contains a Vercel build configuration for a **static-only,
-read-only preview**. Import the GitHub repository into Vercel with the repository
-root (`.`) as the Root Directory and the **Other** framework preset. Vercel runs
-`python build_static_preview.py` and serves the generated `public` directory.
+The repository root is configured for a Flask deployment on Vercel and the
+Vercel Marketplace's Neon PostgreSQL integration. The app can still use MySQL
+for local development. The Vercel database is separate from local MySQL; this
+setup never uploads or copies local expenses.
 
-The build uses fictional sample expenses and a temporary SQLite database that
-is discarded after page generation. It does not deploy or connect to your
-personal MySQL database. The preview includes the dashboard, expenses, add
-expense, categories, people and reports pages; form controls, editing, filters,
-and exports are disabled, and data changes are never saved. For a live tracker
-with persistent data, deploy the Flask app separately and configure a hosted
-database and appropriate access controls.
+### Connect a free database
+
+1. Import this GitHub repository into Vercel with the repository root (`.`) as
+   the Root Directory. Vercel detects the Flask app from `app.py` and
+   `requirements.txt`.
+2. From Vercel Marketplace, install the **Neon** integration. Select its **Free**
+   plan and create a database; the current Neon free plan is $0 and requires no
+   credit card. Connect it to this Vercel project for Development, Preview and
+   Production so it provides `DATABASE_URL`.
+3. In the Vercel project's **Settings > Environment Variables**, set:
+   - `DB_BACKEND` = `postgres`
+   - `PUBLIC_DEMO` = `true`
+   - `SECRET_KEY` = a new, long random value generated privately (for example,
+     `python -c "import secrets; print(secrets.token_hex(32))"`)
+   - `CURRENCY_SYMBOL` = `₹` (optional)
+   Keep `DATABASE_URL` private; Neon supplies it through the integration. Never
+   paste database URLs or secret values into source code, issues, or chat.
+4. In Neon’s SQL editor, run `Personal_Expense_Tracking_System/schema_postgres.sql`.
+   To load fictional sample data instead, securely configure the same
+   `DATABASE_URL` in a local environment and run
+   `python Personal_Expense_Tracking_System/init_postgres_db.py --sample`.
+   This seeds only invented demo expenses and is safe to repeat.
+5. Redeploy after linking the database and setting environment variables.
+
+Neon's Free plan and Vercel Hobby are $0 within their published quotas. They
+have usage limits, and providers may change plans or terms; check that each
+resource remains on its free plan and monitor usage. Do not select a paid plan
+if you need a strict $0 budget.
+
+**Public demo warning:** with `PUBLIC_DEMO=true` the app is intentionally
+unauthenticated. Anyone can view, add, edit and delete the shared data. The
+site displays a warning and should contain fictional data only; never enter
+personal financial information. Existing local MySQL data is not migrated.
 
 ## Security notes
 

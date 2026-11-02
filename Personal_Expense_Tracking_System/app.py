@@ -4,6 +4,7 @@ Run with:  python app.py   (then open http://127.0.0.1:5000 in Chrome)
 """
 import calendar
 import hmac
+import os
 import secrets
 from datetime import date
 
@@ -23,6 +24,8 @@ def create_app(test_config=None):
     app.config.from_object(Config)
     if test_config:
         app.config.update(test_config)
+    if os.environ.get("VERCEL") and not app.config.get("SECRET_KEY"):
+        raise RuntimeError("Set a stable SECRET_KEY environment variable for Vercel.")
 
     db = Database(app.config)
     repo = Repository(db)

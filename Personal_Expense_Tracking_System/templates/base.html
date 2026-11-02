@@ -37,6 +37,9 @@
     </div>
   </header>
   <main class="container">
+    {% if config.get('PUBLIC_DEMO') %}
+      <aside class="flash warning" role="status"><span><strong>Public demo</strong> — Do not enter personal or financial information. Anyone can view, add, edit or delete shared demo data.</span></aside>
+    {% endif %}
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% for category, message in messages %}
         <div class="flash {{ category }}" role="status"><span>{{ message }}</span><button type="button" class="flash-close" aria-label="Dismiss notification">&times;</button></div>

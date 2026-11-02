@@ -21,14 +21,21 @@ def _int_env(name, default):
 
 
 class Config:
-    """Default (real) configuration: MySQL."""
+    """Application configuration; MySQL remains the default local backend."""
 
     TESTING = False
-    SECRET_KEY = os.environ.get("SECRET_KEY") or secrets.token_hex(32)
+    SECRET_KEY = os.environ.get("SECRET_KEY") or (
+        None if os.environ.get("VERCEL") else secrets.token_hex(32))
     CSRF_ENABLED = True
     CURRENCY_SYMBOL = os.environ.get("CURRENCY_SYMBOL", "\u20b9")
+    PUBLIC_DEMO = os.environ.get(
+        "PUBLIC_DEMO", "true" if os.environ.get("VERCEL") else ""
+    ).lower() in ("1", "true", "yes")
 
-    DB_BACKEND = "mysql"
+    DB_BACKEND = os.environ.get(
+        "DB_BACKEND",
+        "postgres" if os.environ.get("DATABASE_URL") else "mysql")
+    DATABASE_URL = os.environ.get("DATABASE_URL") or os.environ.get("POSTGRES_URL")
     DB_HOST = os.environ.get("DB_HOST", "localhost")
     DB_PORT = _int_env("DB_PORT", 3306)
     DB_USER = os.environ.get("DB_USER", "")

@@ -23,15 +23,15 @@ def _iso(value):
     return value.isoformat() if isinstance(value, date) else str(value)
 
 
-def _where(filters):
+def _where(filters, backend="mysql"):
     filters = filters or {}
     clauses, params = [], []
     if filters.get("start"):
         clauses.append("e.expense_date >= %s")
-        params.append(_iso(filters["start"]))
+        params.append(_date_param(filters["start"], backend))
     if filters.get("end"):
         clauses.append("e.expense_date <= %s")
-        params.append(_iso(filters["end"]))
+        params.append(_date_param(filters["end"], backend))
     if filters.get("category_id"):
         clauses.append("e.category_id = %s")
         params.append(int(filters["category_id"]))
@@ -40,6 +40,12 @@ def _where(filters):
         params.append(int(filters["profile_id"]))
     sql = (" WHERE " + " AND ".join(clauses)) if clauses else ""
     return sql, params
+
+
+def _date_param(value, backend):
+    if backend == "postgres":
+        return date.fromisoformat(str(value)[:10])
+    return _iso(value)
 
 
 class Repository:
@@ -119,7 +125,7 @@ class Repository:
         "INNER JOIN profiles p ON p.id = e.profile_id")
 
     def list_expenses(self, filters=None):
-        where, params = _where(filters)
+        where, params = _where(filters, self.db.backend)
         rows = self.db.query_all(
             self._SELECT + where + " ORDER BY e.expense_date DESC, e.id DESC", params)
         return [self._clean_row(r) for r in rows]
@@ -132,7 +138,8 @@ class Repository:
         new_id, _ = self.db.execute(
             "INSERT INTO expenses (title, amount, expense_date, category_id, profile_id, notes) "
             "VALUES (%s, %s, %s, %s, %s, %s)",
-            (data["title"], str(data["amount"]), _iso(data["expense_date"]),
+            (data["title"], str(data["amount"]),
+             _date_param(data["expense_date"], self.db.backend),
              data["category_id"], data["profile_id"], data["notes"]))
         return new_id
 
@@ -140,7 +147,8 @@ class Repository:
         _, count = self.db.execute(
             "UPDATE expenses SET title = %s, amount = %s, expense_date = %s, "
             "category_id = %s, profile_id = %s, notes = %s WHERE id = %s",
-            (data["title"], str(data["amount"]), _iso(data["expense_date"]),
+            (data["title"], str(data["amount"]),
+             _date_param(data["expense_date"], self.db.backend),
              data["category_id"], data["profile_id"], data["notes"], expense_id))
         return count
 
@@ -150,7 +158,7 @@ class Repository:
 
     def total_amount(self, filters=None):
         """SQL SUM of the filtered expenses (used to cross-check the dashboard)."""
-        where, params = _where(filters)
+        where, params = _where(filters, self.db.backend)
         row = self.db.query_one(
             "SELECT COALESCE(SUM(e.amount), 0) AS total FROM expenses e" + where, params)
         return _to_money(row["total"])

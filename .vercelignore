@@ -1,7 +1,14 @@
 .env
 .venv/
 venv/
+*.env
+*.sqlite3
+*.db
+*.log
+**/__pycache__/
 Personal_Expense_Tracking_System/.env
 Personal_Expense_Tracking_System/.venv/
 Personal_Expense_Tracking_System/__pycache__/
 Personal_Expense_Tracking_System/tests/__pycache__/
+Personal_Expense_Tracking_System/tests/
+Personal_Expense_Tracking_System/docs/
