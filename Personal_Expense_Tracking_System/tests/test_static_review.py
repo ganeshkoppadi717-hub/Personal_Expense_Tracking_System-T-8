@@ -53,7 +53,7 @@ class StaticReviewTests(unittest.TestCase):
 
     def test_third_party_imports_are_in_requirements(self):
         reqs = (PROJECT_DIR / "requirements.txt").read_text().lower()
-        for pkg in ("flask", "pymysql", "pandas", "numpy", "matplotlib", "python-dotenv"):
+        for pkg in ("flask", "pymysql", "pandas", "numpy", "python-dotenv"):
             self.assertIn(pkg, reqs)
 
     def test_render_template_targets_exist(self):
@@ -168,7 +168,7 @@ class SchemaConsistencyTests(unittest.TestCase):
             client = create_app({"DB_BACKEND": "sqlite", "SQLITE_PATH": path, "TESTING": True,
                                  "CSRF_ENABLED": False}).test_client()
             for p in ("/", "/expenses", "/categories", "/reports?month=2026-09",
-                      "/chart/category.png", "/chart/monthly.png", "/export.csv"):
+                      "/chart/category.svg", "/chart/monthly.svg", "/export.csv"):
                 self.assertEqual(client.get(p).status_code, 200, p)
 
     def test_no_secrets_in_project(self):

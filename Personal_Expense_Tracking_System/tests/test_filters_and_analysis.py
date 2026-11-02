@@ -48,7 +48,7 @@ class FilterTests(AppTestCase):
     def test_bad_filter_values_do_not_crash(self):
         for qs in ("start=abc", "end=2026-13-45", "category=xyz", "category=999",
                    "start=2026-09-01&end=2026-08-01"):
-            for path in ("/", "/expenses", "/export.csv", "/chart/category.png"):
+            for path in ("/", "/expenses", "/export.csv", "/chart/category.svg"):
                 self.assertEqual(self.client.get("%s?%s" % (path, qs)).status_code, 200, (path, qs))
 
     def test_dashboard_total_matches_database(self):
@@ -74,17 +74,17 @@ class FilterTests(AppTestCase):
         self.assertIn(b'"category": "Travel"', page.data)
         self.assertIn(b'"total": 250.0', page.data)
 
-        with patch("app.charts.category_pie_png", return_value=b"\x89PNG") as pie_chart:
-            response = self.client.get("/chart/category.png" + query)
+        with patch("app.charts.category_pie_svg", return_value=b"<svg/>") as pie_chart:
+            response = self.client.get("/chart/category.svg" + query)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.mimetype, "image/png")
+        self.assertEqual(response.mimetype, "image/svg+xml")
         self.assertEqual(pie_chart.call_args.args[0], [{
             "category": "Travel", "total": 250.0, "count": 1, "percent": 100.0}])
 
-        with patch("app.charts.monthly_bar_png", return_value=b"\x89PNG") as monthly_chart:
-            response = self.client.get("/chart/monthly.png" + query)
+        with patch("app.charts.monthly_bar_svg", return_value=b"<svg/>") as monthly_chart:
+            response = self.client.get("/chart/monthly.svg" + query)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.mimetype, "image/png")
+        self.assertEqual(response.mimetype, "image/svg+xml")
         self.assertEqual(monthly_chart.call_args.args[0], [
             {"month": "2026-08", "total": 250.0, "count": 1}])
         self.assertEqual(monthly_chart.call_args.kwargs, {"currency": "\u20b9"})
@@ -164,43 +164,32 @@ class EmptyDataTests(AppTestCase):
 
     def test_all_pages_work_with_empty_database(self):
         for path in ("/", "/expenses", "/expenses/add", "/categories", "/reports",
-                     "/export.csv", "/chart/category.png", "/chart/monthly.png", "/health"):
+                     "/export.csv", "/chart/category.svg", "/chart/monthly.svg", "/health"):
             self.assertEqual(self.client.get(path).status_code, 200, path)
         self.assertIn(b"No expenses match", self.client.get("/").data)
 
-    def test_empty_charts_are_valid_png(self):
-        for data in (charts.category_pie_png([]), charts.monthly_bar_png([])):
-            self.assertTrue(data.startswith(b"\x89PNG"))
+    def test_empty_charts_are_valid_svg(self):
+        for data in (charts.category_pie_svg([]), charts.monthly_bar_svg([])):
+            self.assertTrue(data.startswith(b"<svg"))
 
 
 class ChartAndExportTests(AppTestCase):
     def test_monthly_chart_preserves_amount_precision_and_currency(self):
-        def inspect_figure(fig):
-            axis = fig.axes[0]
-            self.assertEqual(axis.get_ylabel(), "Total (\u20b9)")
-            self.assertEqual([text.get_text() for text in axis.texts], ["1,234.50"])
-            self.assertEqual([bar.get_height() for bar in axis.patches], [1234.5])
-            return b"\x89PNG"
+        result = charts.monthly_bar_svg(
+            [{"month": "2026-08", "total": 1234.5, "count": 2}],
+            currency="\u20b9")
+        self.assertIn("Total (\u20b9)".encode(), result)
+        self.assertIn(b"1,234.50", result)
 
-        with patch("analysis.charts._to_png", side_effect=inspect_figure):
-            result = charts.monthly_bar_png(
-                [{"month": "2026-08", "total": 1234.5, "count": 2}],
-                currency="\u20b9")
-
-        self.assertEqual(result, b"\x89PNG")
-
-    def test_charts_render_png_and_no_figure_leak(self):
-        import matplotlib.pyplot as plt  # only to count pyplot-managed figures
+    def test_charts_render_svg(self):
         cid = self.make_category("Food")
         self.make_expense(cid, "A", "10.00", "2026-08-05")
-        before = len(plt.get_fignums())
         for _ in range(5):
-            for path in ("/chart/category.png", "/chart/monthly.png"):
+            for path in ("/chart/category.svg", "/chart/monthly.svg"):
                 r = self.client.get(path)
                 self.assertEqual(r.status_code, 200)
-                self.assertEqual(r.mimetype, "image/png")
-                self.assertTrue(r.data.startswith(b"\x89PNG"))
-        self.assertEqual(len(plt.get_fignums()), before)
+                self.assertEqual(r.mimetype, "image/svg+xml")
+                self.assertTrue(r.data.startswith(b"<svg"))
 
     def test_csv_export_and_formula_protection(self):
         cid = self.make_category("Food")

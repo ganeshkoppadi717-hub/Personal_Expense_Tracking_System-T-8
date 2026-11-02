@@ -17,7 +17,7 @@ def line(ok, text):
 def main():
     all_ok = True
     print("Python:", sys.version.split()[0])
-    for pkg in ("flask", "pymysql", "pandas", "numpy", "matplotlib", "dotenv"):
+    for pkg in ("flask", "pymysql", "pandas", "numpy", "dotenv"):
         try:
             mod = importlib.import_module(pkg)
             line(True, "%s %s" % (pkg, getattr(mod, "__version__", "")))

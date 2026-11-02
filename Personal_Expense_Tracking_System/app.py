@@ -282,19 +282,19 @@ def create_app(test_config=None):
                         headers={"Content-Disposition": "attachment; filename=expenses.csv"})
 
     # ------------------------------------------------------------------- charts
-    def _png(data):
-        return Response(data, mimetype="image/png",
+    def _svg(data):
+        return Response(data, mimetype="image/svg+xml",
                         headers={"Cache-Control": "no-store"})
 
-    @app.route("/chart/category.png")
+    @app.route("/chart/category.svg")
     def chart_category():
         df = stats.expenses_to_df(repo.list_expenses(read_filters()))
-        return _png(charts.category_pie_png(stats.category_breakdown(df)))
+        return _svg(charts.category_pie_svg(stats.category_breakdown(df)))
 
-    @app.route("/chart/monthly.png")
+    @app.route("/chart/monthly.svg")
     def chart_monthly():
         df = stats.expenses_to_df(repo.list_expenses(read_filters()))
-        return _png(charts.monthly_bar_png(
+        return _svg(charts.monthly_bar_svg(
             stats.monthly_totals(df), currency=app.config.get("CURRENCY_SYMBOL", "Rs.")))
 
     @app.route("/health")
